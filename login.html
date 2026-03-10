@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Money Alfian - Financial Assistant</title>
+    <title>Login - Money Alfian</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <script>
         tailwind.config = {
             theme: {
@@ -21,11 +20,13 @@
     <style>
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-slate-50 h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row h-[600px] fade-in">
+   <div class="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row h-[600px] fade-in">
         
         <div class="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-brand-600 to-purple-600 text-white p-10 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-full bg-white opacity-10" style="background-image: radial-gradient(#ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
@@ -115,85 +116,220 @@
     </div>
 
     <script>
-        // Database user dummy
-        function getUsers() {
-            return JSON.parse(localStorage.getItem('mj_users')) || [];
+    // ================================================================
+    // FIREBASE CONFIG - Ganti FIREBASE_URL dengan URL database Anda
+    // Harus SAMA PERSIS dengan yang ada di index.html
+    // ================================================================
+    const FIREBASE_URL = "GANTI_DENGAN_URL_FIREBASE_ANDA";
+
+    const isCloudReady = FIREBASE_URL !== "GANTI_DENGAN_URL_FIREBASE_ANDA" && FIREBASE_URL.startsWith("https://");
+
+    // Tampilkan status koneksi
+    const statusEl = document.getElementById('cloudStatus');
+    if (isCloudReady) {
+        statusEl.innerHTML = '<i class="fa-solid fa-cloud text-green-500"></i><span class="text-green-600 font-semibold ml-1">Cloud aktif — akun tersinkronisasi lintas perangkat</span>';
+        statusEl.classList.add('bg-green-50');
+        statusEl.classList.remove('bg-slate-50');
+    } else {
+        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i><span class="text-amber-600 ml-1">Mode lokal — akun hanya tersimpan di perangkat ini</span>';
+        statusEl.classList.add('bg-amber-50');
+        statusEl.classList.remove('bg-slate-50');
+    }
+
+    // ================================================================
+    // HELPER: Sanitasi username untuk dijadikan key Firebase
+    // ================================================================
+    function safeKey(username) {
+        return username.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+
+    // ================================================================
+    // CLOUD FUNCTIONS - Simpan & Ambil Akun User
+    // ================================================================
+    async function saveUserCloud(username, data) {
+        if (!isCloudReady) return false;
+        try {
+            const res = await fetch(`${FIREBASE_URL}/accounts/${safeKey(username)}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return res.ok;
+        } catch(e) { return false; }
+    }
+
+    async function getUserCloud(username) {
+        if (!isCloudReady) return null;
+        try {
+            const res = await fetch(`${FIREBASE_URL}/accounts/${safeKey(username)}.json`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            // Firebase returns null (as JSON null) jika tidak ada
+            return data;
+        } catch(e) { return null; }
+    }
+
+    // ================================================================
+    // UI HELPERS
+    // ================================================================
+    function switchMode(mode) {
+        document.querySelectorAll('input').forEach(i => i.value = '');
+        document.getElementById('loginError').classList.add('hidden');
+        document.getElementById('regError').classList.add('hidden');
+        document.getElementById('regSuccess').classList.add('hidden');
+        if (mode === 'register') {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('registerSection').classList.remove('hidden');
+        } else {
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+        }
+    }
+
+    function togglePass(id) {
+        const el = document.getElementById(id);
+        el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    function setBtnLoading(id, isLoading, label) {
+        const btn = document.getElementById(id);
+        btn.disabled = isLoading;
+        btn.innerHTML = isLoading
+            ? `<i class="fa-solid fa-circle-notch spinner mr-2"></i>${label}`
+            : label;
+    }
+
+    // ================================================================
+    // LOCAL STORAGE HELPERS
+    // ================================================================
+    function getLocalUsers() {
+        return JSON.parse(localStorage.getItem('mj_users')) || [];
+    }
+
+    function saveLocalUser(userData) {
+        const users = getLocalUsers();
+        const idx = users.findIndex(u => u.username.toLowerCase() === userData.username.toLowerCase());
+        if (idx === -1) users.push(userData);
+        else users[idx] = userData;
+        localStorage.setItem('mj_users', JSON.stringify(users));
+    }
+
+    // ================================================================
+    // REGISTER
+    // ================================================================
+    async function handleRegister(e) {
+        e.preventDefault();
+        const username = document.getElementById('regUser').value.trim();
+        const password = document.getElementById('regPass').value.trim();
+        const errEl = document.getElementById('regError');
+        const okEl  = document.getElementById('regSuccess');
+
+        errEl.classList.add('hidden');
+        okEl.classList.add('hidden');
+
+        // Validasi input
+        if (username.length < 3) {
+            errEl.innerText = "Username minimal 3 karakter!";
+            errEl.classList.remove('hidden');
+            return;
+        }
+        if (password.length < 4) {
+            errEl.innerText = "Password minimal 4 karakter!";
+            errEl.classList.remove('hidden');
+            return;
         }
 
-        function switchMode(mode) {
-            const loginSec = document.getElementById('loginSection');
-            const regSec = document.getElementById('registerSection');
-            document.querySelectorAll('input').forEach(i => i.value = '');
-            document.getElementById('loginError').classList.add('hidden');
-            document.getElementById('regError').classList.add('hidden');
-            document.getElementById('regSuccess').classList.add('hidden');
+        setBtnLoading('regBtn', true, 'Mendaftar...');
 
-            if(mode === 'register') {
-                loginSec.classList.add('hidden');
-                regSec.classList.remove('hidden');
+        // Cek apakah username sudah ada
+        const existsCloud = await getUserCloud(username);
+        const localUsers  = getLocalUsers();
+        const existsLocal = localUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
+
+        if (existsCloud !== null || existsLocal) {
+            errEl.innerText = "Username sudah dipakai! Coba username lain.";
+            errEl.classList.remove('hidden');
+            setBtnLoading('regBtn', false, 'Daftar Akun');
+            return;
+        }
+
+        // Buat akun baru
+        const userData = {
+            username: username,
+            password: password,
+            createdAt: new Date().toISOString()
+        };
+
+        // Simpan ke cloud + lokal bersamaan
+        await saveUserCloud(username, userData);
+        saveLocalUser(userData);
+
+        setBtnLoading('regBtn', false, 'Daftar Akun');
+        okEl.classList.remove('hidden');
+        setTimeout(() => switchMode('login'), 1500);
+    }
+
+    // ================================================================
+    // LOGIN
+    // ================================================================
+    async function handleLogin(e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUser').value.trim();
+        const password = document.getElementById('loginPass').value.trim();
+        const errEl    = document.getElementById('loginError');
+        const errMsgEl = document.getElementById('loginErrorMsg');
+
+        errEl.classList.add('hidden');
+        setBtnLoading('loginBtn', true, 'Memeriksa akun...');
+
+        let validUser = null;
+
+        // STEP 1: Cek dari cloud (sumber utama)
+        if (isCloudReady) {
+            const cloudUser = await getUserCloud(username);
+            if (cloudUser && cloudUser.password === password) {
+                validUser = cloudUser;
+                // Sinkronisasi ke lokal supaya bisa offline
+                saveLocalUser(cloudUser);
+            }
+        }
+
+        // STEP 2: Fallback ke localStorage (jika offline / cloud belum setup)
+        if (!validUser) {
+            const localUsers = getLocalUsers();
+            const found = localUsers.find(u =>
+                u.username.toLowerCase() === username.toLowerCase() && u.password === password
+            );
+            if (found) {
+                validUser = found;
+                // Jika cloud aktif tapi tidak ditemukan di cloud, push ke cloud
+                if (isCloudReady) saveUserCloud(found.username, found);
+            }
+        }
+
+        setBtnLoading('loginBtn', false, 'Masuk Sekarang');
+
+        if (validUser) {
+            // Login berhasil
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userName', validUser.username);
+
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Berhasil masuk!';
+            btn.classList.remove('bg-brand-600', 'hover:bg-brand-700');
+            btn.classList.add('bg-green-500');
+
+            setTimeout(() => { window.location.href = 'index.html'; }, 700);
+        } else {
+            // Login gagal
+            if (isCloudReady) {
+                errMsgEl.innerText = "Username atau password salah!";
             } else {
-                regSec.classList.add('hidden');
-                loginSec.classList.remove('hidden');
+                errMsgEl.innerText = "Username atau password salah! Pastikan Anda sudah daftar di perangkat ini.";
             }
+            errEl.classList.remove('hidden');
         }
-
-        function togglePass(id) {
-            const input = document.getElementById(id);
-            input.type = input.type === 'password' ? 'text' : 'password';
-        }
-
-        function handleRegister(e) {
-            e.preventDefault();
-            const user = document.getElementById('regUser').value.trim();
-            const pass = document.getElementById('regPass').value.trim();
-            const errorMsg = document.getElementById('regError');
-            const successMsg = document.getElementById('regSuccess');
-
-            if(user.length < 3) {
-                errorMsg.innerText = "Username minimal 3 karakter!";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const users = getUsers();
-            const exists = users.find(u => u.username.toLowerCase() === user.toLowerCase());
-
-            if(exists) {
-                errorMsg.innerText = "Username sudah dipakai!";
-                errorMsg.classList.remove('hidden');
-            } else {
-                users.push({ username: user, password: pass });
-                localStorage.setItem('mj_users', JSON.stringify(users));
-                errorMsg.classList.add('hidden');
-                successMsg.classList.remove('hidden');
-                setTimeout(() => switchMode('login'), 1500);
-            }
-        }
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('loginUser').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
-            const errorMsg = document.getElementById('loginError');
-
-            const users = getUsers();
-            const validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && u.password === pass);
-
-            if(validUser) {
-                // LOGIKA PENTING:
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userName', validUser.username); // Ini kunci agar nama tidak tertukar
-                
-                const btn = e.target.querySelector('button');
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Masuk...';
-                
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 800);
-            } else {
-                errorMsg.classList.remove('hidden');
-            }
-        }
+    }
     </script>
 </body>
 </html>
