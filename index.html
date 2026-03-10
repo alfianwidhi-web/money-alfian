@@ -13,51 +13,17 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- ☁️ Cloud Storage - Firebase Realtime Database REST API -->
-    <!-- ✅ CARA SETUP (3 menit, GRATIS):
-         1. Buka: https://console.firebase.google.com
-         2. Klik "Add project" → beri nama "money-alfian" → Continue (nonaktif Analytics) → Create
-         3. Di sidebar kiri klik "Build" → "Realtime Database"
-         4. Klik "Create Database" → pilih lokasi (asia-southeast1) → Start in TEST mode → Enable
-         5. Copy URL database Anda (contoh: https://money-alfian-xxx-default-rtdb.firebaseio.com)
-         6. Ganti nilai FIREBASE_URL di bawah ini dengan URL tersebut
-         Selesai! Data tersimpan online permanen & bisa diakses dari HP/laptop manapun.
-    -->
+    <!-- ☁️ Cloud Storage - Firebase Realtime Database -->
     <script>
     (function() {
-        // 👇 GANTI URL INI dengan URL Realtime Database Anda dari Firebase Console
+        // ✅ Firebase Realtime Database - sudah dikonfigurasi
         const FIREBASE_URL = "https://moneykualfian-default-rtdb.asia-southeast1.firebasedatabase.app";
-        // Contoh: "https://money-alfian-abc12-default-rtdb.asia-southeast1.firebasedatabase.app"
 
-        const isConfigured = FIREBASE_URL !== "https://moneykualfian-default-rtdb.asia-southeast1.firebasedatabase.app" && FIREBASE_URL.startsWith("https://");
+        function safeKey(k) { return k.replace(/[.#$[\]]/g, '_'); }
 
-        if (!isConfigured) {
-            // Belum dikonfigurasi - tampilkan banner sekali
-            window.addEventListener('DOMContentLoaded', () => {
-                const banner = document.createElement('div');
-                banner.id = 'cloud-banner';
-                banner.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;padding:10px 18px;border-radius:12px;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:flex;align-items:center;gap:8px;max-width:90vw;text-align:center;cursor:pointer;';
-                banner.innerHTML = '⚠️ Cloud storage belum aktif. Klik untuk lihat cara setup (3 menit)';
-                banner.onclick = () => {
-                    alert('CARA AKTIFKAN CLOUD STORAGE:\n\n1. Buka https://console.firebase.google.com\n2. Buat project baru, nama: money-alfian\n3. Build > Realtime Database > Create Database\n4. Pilih lokasi asia-southeast1 > Test mode > Enable\n5. Copy URL database (https://...firebasedatabase.app)\n6. Buka file index.html, cari FIREBASE_URL\n7. Ganti nilainya dengan URL tadi\n\nSelesai! Data langsung tersimpan online.');
-                };
-                document.body.appendChild(banner);
-                setTimeout(() => banner.remove(), 8000);
-            });
-            window.saveToCloud = async () => {};
-            window.loadFromCloud = async () => null;
-            window.deleteFromCloud = async () => {};
-            window._cloudReady = true;
-            window.dispatchEvent(new Event('cloudReady'));
-            return;
-        }
-
-        // ✅ Firebase Realtime Database via REST API (tidak perlu SDK apapun!)
         window.saveToCloud = async function(key, data) {
             try {
-                // Sanitasi key (hapus karakter yang tidak diizinkan Firebase)
-                const safeKey = key.replace(/[.#$\[\]]/g, '_');
-                const res = await fetch(`${FIREBASE_URL}/users/${safeKey}.json`, {
+                const res = await fetch(`${FIREBASE_URL}/users/${safeKey(key)}.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ transactions: data, updatedAt: Date.now() })
@@ -68,8 +34,7 @@
 
         window.loadFromCloud = async function(key) {
             try {
-                const safeKey = key.replace(/[.#$\[\]]/g, '_');
-                const res = await fetch(`${FIREBASE_URL}/users/${safeKey}.json`);
+                const res = await fetch(`${FIREBASE_URL}/users/${safeKey(key)}.json`);
                 if (!res.ok) return null;
                 const json = await res.json();
                 return json?.transactions || null;
@@ -78,13 +43,10 @@
 
         window.deleteFromCloud = async function(key) {
             try {
-                const safeKey = key.replace(/[.#$\[\]]/g, '_');
-                await fetch(`${FIREBASE_URL}/users/${safeKey}.json`, { method: 'DELETE' });
-                console.log("☁️ Data cloud dihapus");
+                await fetch(`${FIREBASE_URL}/users/${safeKey(key)}.json`, { method: 'DELETE' });
             } catch(e) { console.warn("Cloud delete:", e.message); }
         };
 
-        console.log("✅ Firebase Realtime DB siap:", FIREBASE_URL);
         window._cloudReady = true;
         window.dispatchEvent(new Event('cloudReady'));
     })();
