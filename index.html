@@ -23,13 +23,13 @@
          6. Ganti nilai FIREBASE_URL di bawah ini dengan URL tersebut
          Selesai! Data tersimpan online permanen & bisa diakses dari HP/laptop manapun.
     -->
-     <script>
+    <script>
     (function() {
         // 👇 GANTI URL INI dengan URL Realtime Database Anda dari Firebase Console
-        const FIREBASE_URL = "https://console.firebase.google.com/u/0/project/money-alfian/database/money-alfian-default-rtdb/data/~2F";
+        const FIREBASE_URL = "https://moneykualfian-default-rtdb.asia-southeast1.firebasedatabase.app";
         // Contoh: "https://money-alfian-abc12-default-rtdb.asia-southeast1.firebasedatabase.app"
 
-        const isConfigured = FIREBASE_URL !== "https://console.firebase.google.com/u/0/project/money-alfian/database/money-alfian-default-rtdb/data/~2F" && FIREBASE_URL.startsWith("https://");
+        const isConfigured = FIREBASE_URL !== "https://moneykualfian-default-rtdb.asia-southeast1.firebasedatabase.app" && FIREBASE_URL.startsWith("https://");
 
         if (!isConfigured) {
             // Belum dikonfigurasi - tampilkan banner sekali
