@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Alfian - Financial Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: { brand: { 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row h-[600px] fade-in">
+        
+        <div class="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-brand-600 to-purple-600 text-white p-10 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-white opacity-10" style="background-image: radial-gradient(#ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
+            <div class="relative z-10 text-center">
+                <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-6 mx-auto backdrop-blur-sm shadow-lg">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h1 class="text-3xl font-bold mb-2">Money Alfian</h1>
+                <p class="text-indigo-100 text-sm">Kelola keuanganmu dengan cerdas & mudah.</p>
+            </div>
+            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500 rounded-full blur-3xl opacity-50"></div>
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-400 rounded-full blur-3xl opacity-50"></div>
+        </div>
+
+        <div class="w-full md:w-1/2 p-8 md:p-12 relative flex flex-col justify-center">
+            
+            <div id="loginSection" class="w-full">
+                <h2 class="text-2xl font-bold text-slate-800 mb-1">Selamat Datang! 👋</h2>
+                <p class="text-slate-400 text-sm mb-8">Silakan masuk ke akun Anda.</p>
+                
+                <form onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Username</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="loginUser" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" placeholder="Masukkan username" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="password" id="loginPass" class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" placeholder="••••••••" required>
+                            <i onclick="togglePass('loginPass')" class="fa-solid fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-brand-600"></i>
+                        </div>
+                    </div>
+                    
+                    <p id="loginError" class="text-red-500 text-xs hidden text-center"><i class="fa-solid fa-circle-exclamation mr-1"></i> Username atau password salah!</p>
+
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/30 transition transform active:scale-95">
+                        Masuk Sekarang
+                    </button>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-slate-500">
+                    Belum punya akun? 
+                    <button onclick="switchMode('register')" class="text-brand-600 font-bold hover:underline">Daftar dulu</button>
+                </p>
+            </div>
+
+            <div id="registerSection" class="w-full hidden fade-in">
+                <h2 class="text-2xl font-bold text-slate-800 mb-1">Buat Akun Baru 🚀</h2>
+                <p class="text-slate-400 text-sm mb-8">Isi data di bawah untuk bergabung.</p>
+                
+                <form onsubmit="handleRegister(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Username Baru</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user-plus absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="regUser" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" placeholder="Buat username unik" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="password" id="regPass" class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" placeholder="••••••••" required>
+                            <i onclick="togglePass('regPass')" class="fa-solid fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-brand-600"></i>
+                        </div>
+                    </div>
+
+                    <p id="regError" class="text-red-500 text-xs hidden text-center"></p>
+                    <p id="regSuccess" class="text-green-600 text-xs hidden text-center font-bold"><i class="fa-solid fa-check-circle mr-1"></i> Akun berhasil dibuat! Silakan login.</p>
+
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl shadow-lg transition transform active:scale-95">
+                        Daftar Akun
+                    </button>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-slate-500">
+                    Sudah punya akun? 
+                    <button onclick="switchMode('login')" class="text-brand-600 font-bold hover:underline">Login disini</button>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Database user dummy
+        function getUsers() {
+            return JSON.parse(localStorage.getItem('mj_users')) || [];
+        }
+
+        function switchMode(mode) {
+            const loginSec = document.getElementById('loginSection');
+            const regSec = document.getElementById('registerSection');
+            document.querySelectorAll('input').forEach(i => i.value = '');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('regError').classList.add('hidden');
+            document.getElementById('regSuccess').classList.add('hidden');
+
+            if(mode === 'register') {
+                loginSec.classList.add('hidden');
+                regSec.classList.remove('hidden');
+            } else {
+                regSec.classList.add('hidden');
+                loginSec.classList.remove('hidden');
+            }
+        }
+
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const errorMsg = document.getElementById('regError');
+            const successMsg = document.getElementById('regSuccess');
+
+            if(user.length < 3) {
+                errorMsg.innerText = "Username minimal 3 karakter!";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const users = getUsers();
+            const exists = users.find(u => u.username.toLowerCase() === user.toLowerCase());
+
+            if(exists) {
+                errorMsg.innerText = "Username sudah dipakai!";
+                errorMsg.classList.remove('hidden');
+            } else {
+                users.push({ username: user, password: pass });
+                localStorage.setItem('mj_users', JSON.stringify(users));
+                errorMsg.classList.add('hidden');
+                successMsg.classList.remove('hidden');
+                setTimeout(() => switchMode('login'), 1500);
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const errorMsg = document.getElementById('loginError');
+
+            const users = getUsers();
+            const validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && u.password === pass);
+
+            if(validUser) {
+                // LOGIKA PENTING:
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userName', validUser.username); // Ini kunci agar nama tidak tertukar
+                
+                const btn = e.target.querySelector('button');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Masuk...';
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 800);
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
