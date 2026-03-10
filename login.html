@@ -51,7 +51,11 @@
         <!-- Panel Kanan -->
         <div class="w-full md:w-1/2 p-8 md:p-12 relative flex flex-col justify-center">
 
-
+            <!-- Status koneksi cloud -->
+            <div id="cloudStatus" class="mb-5 text-xs text-center flex items-center justify-center gap-1 bg-slate-50 rounded-xl py-2 px-3">
+                <i class="fa-solid fa-circle-notch spinner text-slate-400"></i>
+                <span class="text-slate-400">Menghubungkan ke server...</span>
+            </div>
             
             <!-- LOGIN SECTION -->
             <div id="loginSection" class="w-full">
@@ -133,17 +137,45 @@
     </div>
 
     <script>
-    // Firebase Realtime Database
-    const FIREBASE_URL = "https://moneykualfian-default-rtdb.asia-southeast1.firebasedatabase.app";
+    // ================================================================
+    // KONFIGURASI FIREBASE — isi URL ini dengan URL Realtime Database kamu
+    // Cara dapat URL: console.firebase.google.com > project > Realtime Database
+    // Harus SAMA dengan FIREBASE_URL di index.html
+    // ================================================================
+    const FIREBASE_URL = "https://money-alfian-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+    // Deteksi apakah Firebase sudah dikonfigurasi
     const isCloudReady = FIREBASE_URL.startsWith("https://") && !FIREBASE_URL.includes("GANTI");
 
+    // Tampilkan status koneksi cloud
+    const statusEl = document.getElementById('cloudStatus');
+    async function checkFirebase() {
+        if (!isCloudReady) {
+            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i><span class="text-amber-600 ml-1">Mode lokal — daftar di HP lain tidak akan muncul di sini</span>';
+            statusEl.className = 'mb-5 text-xs text-center flex items-center justify-center gap-1 bg-amber-50 rounded-xl py-2 px-3';
+            return;
+        }
+        try {
+            const res = await fetch(FIREBASE_URL + '/.json?shallow=true', { signal: AbortSignal.timeout(4000) });
+            if (res.ok || res.status === 401) {
+                statusEl.innerHTML = '<i class="fa-solid fa-cloud text-green-500"></i><span class="text-green-600 font-semibold ml-1">Cloud aktif — login bisa dari perangkat manapun!</span>';
+                statusEl.className = 'mb-5 text-xs text-center flex items-center justify-center gap-1 bg-green-50 rounded-xl py-2 px-3';
+            } else { throw new Error(); }
+        } catch(e) {
+            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i><span class="text-amber-600 ml-1">Tidak terhubung ke cloud — cek internet</span>';
+            statusEl.className = 'mb-5 text-xs text-center flex items-center justify-center gap-1 bg-amber-50 rounded-xl py-2 px-3';
+        }
+    }
+    checkFirebase();
 
-
+    // Sanitasi key Firebase (tidak boleh ada . # $ [ ])
     function safeKey(username) {
         return username.toLowerCase().replace(/[^a-z0-9]/g, '_');
     }
 
-
+    // ================================================================
+    // CLOUD: Simpan & Ambil data akun user
+    // ================================================================
     async function saveUserCloud(username, data) {
         if (!isCloudReady) return false;
         try {
@@ -167,7 +199,9 @@
         } catch(e) { return null; }
     }
 
-
+    // ================================================================
+    // LOCAL STORAGE: backup offline
+    // ================================================================
     function getLocalUsers() {
         return JSON.parse(localStorage.getItem('mj_users')) || [];
     }
@@ -179,7 +213,9 @@
         localStorage.setItem('mj_users', JSON.stringify(users));
     }
 
-
+    // ================================================================
+    // UI HELPERS
+    // ================================================================
     function switchMode(mode) {
         document.querySelectorAll('input').forEach(i => i.value = '');
         document.getElementById('loginError').classList.add('hidden');
@@ -204,7 +240,9 @@
         btn.innerHTML = isLoading ? `<i class="fa-solid fa-circle-notch spinner mr-2"></i>${label}` : label;
     }
 
-
+    // ================================================================
+    // REGISTER — simpan akun ke cloud + lokal
+    // ================================================================
     async function handleRegister(e) {
         e.preventDefault();
         const username = document.getElementById('regUser').value.trim();
@@ -219,6 +257,7 @@
 
         setBtnLoading('regBtn', true, 'Mendaftar...');
 
+        // Cek username sudah dipakai (cloud + lokal)
         const existsCloud = await getUserCloud(username);
         const existsLocal = getLocalUsers().some(u => u.username.toLowerCase() === username.toLowerCase());
 
@@ -231,6 +270,7 @@
 
         const userData = { username, password, createdAt: new Date().toISOString() };
 
+        // Simpan ke cloud DAN lokal secara bersamaan
         const cloudOk = await saveUserCloud(username, userData);
         saveLocalUser(userData);
 
@@ -242,7 +282,9 @@
         setTimeout(() => switchMode('login'), 2000);
     }
 
-
+    // ================================================================
+    // LOGIN — cek cloud dulu, fallback ke lokal
+    // ================================================================
     async function handleLogin(e) {
         e.preventDefault();
         const username = document.getElementById('loginUser').value.trim();
@@ -255,19 +297,22 @@
 
         let validUser = null;
 
+        // STEP 1: Cek dari cloud (utama — bisa lintas perangkat)
         const cloudUser = await getUserCloud(username);
         if (cloudUser && cloudUser.password === password) {
             validUser = cloudUser;
-            saveLocalUser(cloudUser);
+            saveLocalUser(cloudUser); // sinkron ke lokal untuk mode offline
         }
 
+        // STEP 2: Fallback ke localStorage (jika offline atau cloud belum setup)
         if (!validUser) {
             const found = getLocalUsers().find(u =>
                 u.username.toLowerCase() === username.toLowerCase() && u.password === password
             );
             if (found) {
                 validUser = found;
-                    saveUserCloud(found.username, found);
+                // Push ke cloud supaya bisa login dari perangkat lain
+                saveUserCloud(found.username, found);
             }
         }
 
@@ -282,7 +327,9 @@
             btn.classList.add('bg-green-500');
             setTimeout(() => { window.location.href = 'index.html'; }, 700);
         } else {
-            errMsgEl.innerText = "Username atau password salah!";
+            errMsgEl.innerText = isCloudReady
+                ? "Username atau password salah!"
+                : "Akun tidak ditemukan. Pastikan sudah daftar, atau setup Firebase agar bisa login lintas perangkat.";
             errEl.classList.remove('hidden');
         }
     }
